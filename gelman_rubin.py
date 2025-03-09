@@ -16,10 +16,6 @@ import pandas as pd
 import json
 
 def gelman_rubin(chains_data, metric="pop_max_dev"):
-    """
-    Calculate Gelman-Rubin statistic for specified metric across chains.
-    Burn-in period is determined by hot phase only.
-    """
     if metric == "comp":
         phase1_data = [chain[f"phase1_comp"] for chain in chains_data]
         phase2_data = [chain[f"phase2_comp_scores"] for chain in chains_data]
@@ -130,9 +126,6 @@ def calculate_partition_similarity(partition1, partition2):
     return matching_nodes / total_nodes
 
 def analyze_district_populations(data):
-    """
-    extracts and prints district population statistics
-    """
     # use the last iteration
     if isinstance(data, list):
         partition = data[-1]
@@ -275,18 +268,6 @@ def plot_results(chains_data, pop_dev_rhat, pop_score_rhat, comp_score_rhat,
 
 # run_chain with simulated annealing
 def run_chain_and_collect_scores(chain_num, partition_file, shapefile, phase_length, initial_assignment=None):
-    """
-    Run chain with simulated annealing and collect scores.
-    
-    Args:
-        partition_file: Path to graph file
-        shapefile: Path to shapefile
-        hot_duration: Number of hot phases
-        cooldown_duration: Number of cooldown phases
-        cold_duration: Number of cold phases
-        phase_length: Length of each phase
-        initial_assignment: Optional initial district assignment dictionary
-    """
     final_partition, final_stats = run_chain(
         chain_num=chain_num,
         partition_file=partition_file,
@@ -318,7 +299,6 @@ def assess_convergence(partition_file, shapefile, num_chains=3, phase_len=1000, 
     chains_data = []
     final_partitions = []
     all_stats = []
-    initial_assignments = []
     
     graph = Graph.from_json(partition_file)
     gdf = gpd.read_file(f"./shapefile_with_islands/{shapefile}")
@@ -387,54 +367,24 @@ def assess_convergence(partition_file, shapefile, num_chains=3, phase_len=1000, 
     
     # burn_in_steps = hot_duration * phase_len
     # r_hat = gelman_rubin(chains_data, burn_in_steps=burn_in_steps)
-    return pop_dev_rhat, pop_score_rhat, comp_score_rhat, chains_data, final_partitions, all_stats, initial_assignments
-
-# if __name__ == "__main__":
-#     partition_file = "./graphs/shapefile_with_islands.json"
-#     shapefile = "shapefile_with_islands.shp"
-    
-#     # set annealing schedule parameters
-#     # hot, cooldown, cold = 10, 100, 40
-#     phase_len = 1000
-#     # total_steps = hot + cooldown + cold
-    
-#     # check convergence
-#     pop_dev_rhat, pop_score_rhat, comp_score_rhat, chains_data, final_partitions, all_stats, initial_assignments = assess_convergence(
-#         partition_file, shapefile,
-#         num_chains=3,
-#         phase_len=phase_len,
-#         threshold=1.1
-#     )
-    
-#     print(f"R-hat statistic: {r_hat:.4f}")
-#     if converged:
-#         print("Chains have converged.")
-#     else:
-#         print("Chains have not converged.")
-    
-#     plot_chains(chains_data, r_hat)
-#     plot_results(chains_data, r_hat, initial_assignments, final_partitions, partition_file, shapefile)
+    return initial_partitions,pop_dev_rhat, pop_score_rhat, comp_score_rhat, chains_data, final_partitions, all_stats, initial_assignments
 
 if __name__ == "__main__":
     partition_file = "./graphs/shapefile_with_islands.json"
     shapefile = "shapefile_with_islands.shp"
-
-    chains_data = []
-    for i, name in enumerate(['spanning_tree', 'random_nodes', 'current_districting']):
-        with open(f'./chain-final-scores/{name}_scores.json', 'r') as f:
-            chains_data.append(json.load(f))
-
-    initial_partitions = []
-    final_partitions = []
-    for i, name in enumerate(['spanning_tree', 'random_nodes', 'current_districting']):
-        with open(f'./chain-initial-partitions/{name}_initial_partition.json', 'r') as f:
-            initial_partitions.append(json.load(f))
-        with open(f'./chain-final-partitions/{name}_final_partition.json', 'r') as f:
-            final_partitions.append(json.load(f))
-
-    pop_dev_rhat = gelman_rubin(chains_data, metric="pop_max_dev")
-    pop_score_rhat = gelman_rubin(chains_data, metric="pop_scores")
-    comp_score_rhat = gelman_rubin(chains_data, metric="comp")
+    
+    # set annealing schedule parameters
+    # hot, cooldown, cold = 10, 100, 40
+    phase_len = 1000
+    # total_steps = hot + cooldown + cold
+    
+    # check convergence
+    initial_partitions, pop_dev_rhat, pop_score_rhat, comp_score_rhat, chains_data, final_partitions, all_stats, initial_assignments = assess_convergence(
+        partition_file, shapefile,
+        num_chains=3,
+        phase_len=phase_len,
+        threshold=1.1
+    )
     
     print(f"\nR-hat statistics:")
     print(f"Population deviation: {pop_dev_rhat:.4f}")
@@ -444,3 +394,33 @@ if __name__ == "__main__":
     plot_chains(chains_data, pop_dev_rhat, pop_score_rhat, comp_score_rhat)
     plot_results(chains_data, pop_dev_rhat, pop_score_rhat, comp_score_rhat, 
                 initial_partitions, final_partitions, partition_file, shapefile)
+
+# if __name__ == "__main__":
+#     partition_file = "./graphs/shapefile_with_islands.json"
+#     shapefile = "shapefile_with_islands.shp"
+
+#     chains_data = []
+#     for i, name in enumerate(['spanning_tree', 'random_nodes', 'current_districting']):
+#         with open(f'./chain-final-scores/{name}_scores.json', 'r') as f:
+#             chains_data.append(json.load(f))
+
+#     initial_partitions = []
+#     final_partitions = []
+#     for i, name in enumerate(['spanning_tree', 'random_nodes', 'current_districting']):
+#         with open(f'./chain-initial-partitions/{name}_initial_partition.json', 'r') as f:
+#             initial_partitions.append(json.load(f))
+#         with open(f'./chain-final-partitions/{name}_final_partition.json', 'r') as f:
+#             final_partitions.append(json.load(f))
+
+#     pop_dev_rhat = gelman_rubin(chains_data, metric="pop_max_dev")
+#     pop_score_rhat = gelman_rubin(chains_data, metric="pop_scores")
+#     comp_score_rhat = gelman_rubin(chains_data, metric="comp")
+    
+    # print(f"\nR-hat statistics:")
+    # print(f"Population deviation: {pop_dev_rhat:.4f}")
+    # print(f"Population score: {pop_score_rhat:.4f}")
+    # print(f"Compactness score: {comp_score_rhat:.4f}")
+
+    # plot_chains(chains_data, pop_dev_rhat, pop_score_rhat, comp_score_rhat)
+    # plot_results(chains_data, pop_dev_rhat, pop_score_rhat, comp_score_rhat, 
+    #             initial_partitions, final_partitions, partition_file, shapefile)
