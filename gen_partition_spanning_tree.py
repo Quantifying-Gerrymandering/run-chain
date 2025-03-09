@@ -87,37 +87,64 @@ def split_spanning_tree(tree, n, alpha=0.5, beta=1.5):
 
     return cut_edges
 
-spanning_tree = random_spanning_tree(graph)
-cut_edges = split_spanning_tree(spanning_tree, PARTITIONS)
-spanning_tree.remove_edges_from(cut_edges)
-partitions = list(nx.connected_components(spanning_tree))
-partition_map = {i: list(part) for i, part in enumerate(partitions)}
+def generate_spanning_tree_partition(graph, num_districts):
+    """
+    Generates a partition using random spanning tree method.
+    
+    Args:
+        graph: Graph object to partition
+        num_districts: Number of districts to create
+    
+    Returns:
+        dict: Mapping of node IDs to district IDs
+    """
+    # Generate spanning tree
+    spanning_tree = random_spanning_tree(graph)
+    
+    # Get cut edges that split into districts
+    cut_edges = split_spanning_tree(spanning_tree, num_districts)
+    
+    # Remove the cut edges to create districts
+    spanning_tree.remove_edges_from(cut_edges)
+    
+    # Get connected components (districts)
+    districts = list(nx.connected_components(spanning_tree))
+    
+    # Create mapping of nodes to district IDs
+    node_to_district = {}
+    for district_id, nodes in enumerate(districts):
+        for node in nodes:
+            node_to_district[node] = district_id
+            
+    return node_to_district
 
-node_to_district = {
-    node: district_id
-    for district_id, nodes in partition_map.items()
-    for node in nodes
-}
+# spanning_tree = random_spanning_tree(graph)
+# cut_edges = split_spanning_tree(spanning_tree, PARTITIONS)
+# spanning_tree.remove_edges_from(cut_edges)
+# partitions = list(nx.connected_components(spanning_tree))
+# partition_map = {i: list(part) for i, part in enumerate(partitions)}
 
-# Assign the 'district_id' attribute to all nodes in the graph
-nx.set_node_attributes(graph, node_to_district, name='district_id')
-graph.to_json("./graphs/shapefile_with_islands.json")
+# node_to_district = generate_spanning_tree_partition(graph, PARTITIONS)
 
-# PLOT
-gdf = gpd.read_file("./shapefile_with_islands/shapefile_with_islands.shp")
+# # Assign the 'district_id' attribute to all nodes in the graph
+# nx.set_node_attributes(graph, node_to_district, name='district_id')
+# graph.to_json("./graphs/shapefile_with_islands.json")
 
-# Create a new column and initialize it with NaN or a default value
-gdf['district_id'] = None
-base_colors = cm.tab20.colors * 3  # Repeat to ensure at least 52 colors
-shuffled_colors = np.random.permutation(base_colors[:52])  # Randomly shuffle the colors
-random_cmap = ListedColormap(shuffled_colors)
+# # PLOT
+# gdf = gpd.read_file("./shapefile_with_islands/shapefile_with_islands.shp")
 
-# Assign district_id based on the mapping
-for district_id, indices in partition_map.items():
-    gdf.loc[indices, 'district_id'] = district_id
-print("Unique districts:", gdf['district_id'].unique())
-gdf.plot("district_id", 
-         cmap=random_cmap,
-         edgecolor="black",
-         linewidth=0.1)  
-plt.show()
+# # Create a new column and initialize it with NaN or a default value
+# gdf['district_id'] = None
+# base_colors = cm.tab20.colors * 3  # Repeat to ensure at least 52 colors
+# shuffled_colors = np.random.permutation(base_colors[:52])  # Randomly shuffle the colors
+# random_cmap = ListedColormap(shuffled_colors)
+
+# # Assign district_id based on the mapping
+# for district_id, indices in partition_map.items():
+#     gdf.loc[indices, 'district_id'] = district_id
+# print("Unique districts:", gdf['district_id'].unique())
+# gdf.plot("district_id", 
+#          cmap=random_cmap,
+#          edgecolor="black",
+#          linewidth=0.1)  
+# plt.show()
